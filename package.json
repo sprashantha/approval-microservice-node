@@ -1,9 +1,10 @@
 {
   "name": "approval-microservice",
   "version": "0.0.1",
-  "description": "ProxytoConcur'sWebServices",
+  "description": "Approvals API",
   "scripts": {
-    "start": "node --harmony ./main.js"
+    "start": "node --harmony ./main.js",
+    "test": "mocha test"
   },
   "author": "Prashanth",
   "license": "ISC",
@@ -28,5 +29,14 @@
     "uuid-lib": "0.0.6",
     "winston": "~0.8.0",
     "xml2js": "^0.4.12"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.5",
+    "mocha": "~2.2.4",
+    "chai": "~2.3.0",
+    "grunt-mocha": "~0.4.12",
+    "supertest": "~1.0.1",
+    "grunt-simple-mocha": "~0.4.0",
+    "sinon": "~1.14.1"
   }
 }

@@ -88,61 +88,84 @@ module.exports = function(context, app, router) {
             logger.debug("options.url: " + options.url);
             request(options, function (err, couchRes, body) {
                 if (err) {
-                    res.json(502, {error: "bad_gateway", reason: err.code});
+                    res.status(502).json({error: "bad_gateway", reason: err.code});
                     return;
                 }
-                let jsonBody = JSON.parse(body, util.reviver);
+                else
+                {
 
-                // Cleanup the orgunits and custom fields.
-                stripOutBlankOrgUnits(jsonBody, 6);
-                stripOutBlankCustomFields(jsonBody, 20);
-                let expenseEntries = jsonBody['expenseEntriesList'];
+                    // Note the reviver will change the fields from pascal case to camel case.
+                    let jsonBody = JSON.parse(body, util.reviver);
 
-                for (let i = 0; i < expenseEntries.length; i++) {
-                    stripOutBlankOrgUnits(expenseEntries[i], 6);
-                    stripOutBlankCustomFields(expenseEntries[i], 40);
+                    // console.log("Report body=" + body);
+                    if (!jsonBody || jsonBody == '' || jsonBody.error) {
+                        logger.debug("body: " + body);
+                        if (jsonBody && jsonBody.error & jsonBody.error.message == 'Invalid report') {
+                            res.status(404).json({error: "Not found", reason: "Report not found"});
+                        }
+                        else if (jsonBody && jsonBody.error & jsonBody.error.message != 'Invalid report') {
+                            res.status(502).json({error: "Bad Gateway", reason: body.error.message});
+                        }
+                        else {
+                            res.status(404).json({error: "Not found", reason: "No report body"});
+                        }
+                        return;
+                    }
 
-                    delete expenseEntries[i]['cardTransaction'];
+                    // Cleanup the orgunits and custom fields.
+                    stripOutBlankOrgUnits(jsonBody, 6);
+                    stripOutBlankCustomFields(jsonBody, 20);
+                    let expenseEntries = jsonBody['expenseEntriesList'];
+                    if (expenseEntries){
+                        for (let i = 0; i < expenseEntries.length; i++) {
+                            stripOutBlankOrgUnits(expenseEntries[i], 6);
+                            stripOutBlankCustomFields(expenseEntries[i], 40);
 
-                    // Generate a URL for the receipt image.
-                    if (expenseEntries[i]['entryImageID'] && expenseEntries[i]['entryImageID'] != "") {
-                        expenseEntries[i]['receiptImage'] = {
-                            href: rootUrl + '/expense/v4/approvers/receiptImage/' + expenseEntries[i]['entryImageID'],
-                            rel: "Receipt Image",
-                            method: 'GET'
+                            delete expenseEntries[i]['cardTransaction'];
+
+                            // Generate a URL for the receipt image.
+                            if (expenseEntries[i]['entryImageID'] && expenseEntries[i]['entryImageID'] != "") {
+                                expenseEntries[i]['receiptImage'] = {
+                                    href: rootUrl + '/expense/v4/approvers/receiptImage/' + expenseEntries[i]['entryImageID'],
+                                    rel: "Receipt Image",
+                                    method: 'GET'
+                                }
+                            }
+
+                            let itemizations = expenseEntries[i]['itemizationsList'];
+                            for (let j = 0; j < itemizations.length; j++) {
+                                stripOutBlankOrgUnits(itemizations[j], 6);
+                                stripOutBlankCustomFields(itemizations[j], 40);
+
+                                let allocations = itemizations[j]['allocationsList'];
+                                for (let k = 0; k < allocations.length; k++) {
+                                    stripOutBlankOrgUnits(allocations[k], 6);
+                                    stripOutBlankCustomFields(allocations[k], 40);
+                                }
+                            }
                         }
                     }
 
-                    let itemizations = expenseEntries[i]['itemizationsList'];
-                    for (let j = 0; j < itemizations.length; j++) {
-                        stripOutBlankOrgUnits(itemizations[j], 6);
-                        stripOutBlankCustomFields(itemizations[j], 40);
+                    delete jsonBody['employeeBankAccount'];
+                    delete jsonBody['workflowActionURL'];
 
-                        let allocations = itemizations[j]['allocationsList'];
-                        for (let k = 0; k < allocations.length; k++) {
-                            stripOutBlankOrgUnits(allocations[k], 6);
-                            stripOutBlankCustomFields(allocations[k], 40);
+                    jsonBody['workflow'] = {
+                        href: rootUrl + '/expense/v4/approvers/reports/' + reportId + '/workflow',
+                        rel: 'Approval or Rejection',
+                        method: 'POST',
+                        body: {
+                            workflowAction: {
+                                action: 'Approve',
+                                comment: 'Approved via Connect'
+                            }
                         }
                     }
+
+                    res.json(jsonBody);
+                    return;
+
                 }
-
-                delete jsonBody['employeeBankAccount'];
-                delete jsonBody['workflowActionURL'];
-
-                jsonBody['workflow'] = {
-                    href: rootUrl + '/expense/v4/approvers/reports/' + reportId + '/workflow',
-                    rel: 'Approval or Rejection',
-                    method: 'POST',
-                    body: {
-                        workflowAction: {
-                            action: 'Approve',
-                            comment: 'Approved via Connect'
-                        }
-                    }
-                }
-
-                res.json(jsonBody);
-            })
+            });
 
         });
     router.route('/expense/v4/approvers/reports/:reportId/workflow')

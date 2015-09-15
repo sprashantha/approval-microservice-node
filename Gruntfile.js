@@ -9,7 +9,7 @@ module.exports = function(grunt){
                 reporter: 'tap'
             },
 
-            all: { src: ['test/**/imagingTests.js'] }
+            all: { src: ['test/**/tests.js'] }
         }
     });
 
