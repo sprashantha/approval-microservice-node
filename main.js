@@ -65,22 +65,12 @@ const
 async.parallel([
         function (callback) {
             setTimeout(function () {
-                dbWrapper.setupRedisConnection(context, function(err){
-                    if (err){
-                        logger.info("Mongo setup error");
-                    }
-                })
-                callback();
+                dbWrapper.setupRedisConnection(context, callback);
             }, 500);
         },
         function (callback) {
             setTimeout(function () {
-                dbWrapper.setupMongoConnection(context, function(err){
-                    if (err){
-                        logger.info("Mongo setup error");
-                    }
-                })
-                callback();
+                dbWrapper.setupMongoConnection(context, callback);
             }, 500);
         },
         function (callback){
@@ -99,20 +89,21 @@ async.parallel([
                 context.sqsQueueUrl = sqsQueueUrl;
                 awsWrapper.testSQSConnection(sqs, sqsQueueUrl, callback);
             }, 500);
-        }],
-        function (err, results) {
-            if (err) {
-                console.error(err);
-            }
+        }
+        ],
+    function (err, results) {
+        if (err) {
+            console.error(err);
+        }
 
-            logger.info("Attempting to start server on port " + context.config.port);
+        logger.info("Attempting to start server on port " + context.config.port);
 
-            // Start the server and listen on port set by the environment (example: 8081 in AWS) or 3000.
-            app.listen(context.config.port, function(){
-                logger.info("Server started. Listening on port " + context.config.port);
+        // Start the server and listen on port set by the environment (example: 8081 in AWS) or 3000.
+        app.listen(context.config.port, function(){
+            logger.info("Server started. Listening on port " + context.config.port);
 
-            })
-        });
+        })
+    });
 
     // Setup the router including authorization.
     let router = express.Router();
@@ -123,12 +114,8 @@ async.parallel([
 
 
     // Route requests.
-    require('./routes/concur_login.js')(context, app);
-    require('./routes/concur_home.js')(context, app, router);
-    require('./routes/concur_trips.js')(context, app, router);
-    require('./routes/concur_reports.js')(context, app, router);
+
     require('./routes/concur_approvals.js')(context, app, router);
-    require('./routes/concur_imaging.js')(context, router);
 
 
 	

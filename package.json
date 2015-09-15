@@ -1,41 +1,32 @@
 {
-  "name": "ConcurAPIProxy",
+  "name": "approval-microservice",
   "version": "0.0.1",
-  "description": "Proxy to Concur's Web Services",
+  "description": "ProxytoConcur'sWebServices",
   "scripts": {
-    "start": "node --harmony ./main.js",
-    "test": "mocha test"
+    "start": "node --harmony ./main.js"
   },
   "author": "Prashanth",
   "license": "ISC",
   "dependencies": {
-    "request": "~2.44.0",
-    "express": "~4.9.5",
-    "winston": "~0.8.0",
     "async": "~0.9.0",
-    "concur-platform": "~0.1.9",
-    "body-parser": "~1.9.0",
-    "urlencode": "~0.2.0",
-    "nconf": "~0.6.9",
-    "redis": "~0.12.1",
-    "mongodb": "~1.4.19",
-    "json2xml": "~0.1.1",
-    "xml2json": "~0.5.1",
     "aws-sdk": "~2.0.29",
-    "uuid-lib": "0.0.6",
-    "node-uuid": "~1.4.3",
+    "body-parser": "~1.9.0",
+    "circuit-breaker": "0.0.4",
+    "concur-platform": "~0.1.9",
+    "express": "~4.9.5",
     "formidable": "~1.0.17",
+    "json2xml": "~0.1.1",
+    "mongodb": "^1.4.39",
+    "mongoose": "^4.1.6",
     "multer": "~0.1.8",
+    "nconf": "~0.6.9",
+    "node-uuid": "~1.4.3",
+    "redis": "~0.12.1",
+    "request": "~2.44.0",
     "request-id": "~0.9.0",
-    "circuit-breaker": "0.0.4"
-  },
-  "devDependencies": {
-    "grunt": "~0.4.5",
-    "mocha": "~2.2.4",
-    "chai": "~2.3.0",
-    "grunt-mocha": "~0.4.12",
-    "supertest": "~1.0.1",
-    "grunt-simple-mocha": "~0.4.0",
-    "sinon": "~1.14.1"
+    "urlencode": "~0.2.0",
+    "uuid-lib": "0.0.6",
+    "winston": "~0.8.0",
+    "xml2js": "^0.4.12"
   }
 }

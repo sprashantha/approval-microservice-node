@@ -1,6 +1,0 @@
-Git Commands
-
-git add -A
-git commit -m 'Add a comment'
-git push origin master
-git aws.push

@@ -4,7 +4,7 @@ const
 	request = require('request'),
     express = require('express'),
     json2xml = require('json2xml'),
-    xml2json = require('xml2json'),
+    xml2js = require('xml2js'),
     async = require('async'),
     logger = require('../lib/logger.js'),
     util = require('../lib/util.js'),
@@ -55,7 +55,7 @@ module.exports = function(context, app, router) {
             let reports = JSON.parse(body, util.reviver);
             logger.debug("typeof reports: " + typeof reports);
             logger.debug("reports.items.length: " + reports.items.length);
-            for (let i = 0; i < reports.items.length; i++){
+            for (let i = 0; i < reports.items.length; i++) {
                 reports.items[i]['reportID'] = reports.items[i]['iD'];
                 reports.items[i]['href'] = rootUrl + "/expense/v4/approvers/reports/" + reports.items[i]['reportID'];
 
@@ -94,7 +94,7 @@ module.exports = function(context, app, router) {
                 let jsonBody = JSON.parse(body, util.reviver);
 
                 // Cleanup the orgunits and custom fields.
-                 stripOutBlankOrgUnits(jsonBody, 6);
+                stripOutBlankOrgUnits(jsonBody, 6);
                 stripOutBlankCustomFields(jsonBody, 20);
                 let expenseEntries = jsonBody['expenseEntriesList'];
 
@@ -105,7 +105,7 @@ module.exports = function(context, app, router) {
                     delete expenseEntries[i]['cardTransaction'];
 
                     // Generate a URL for the receipt image.
-                    if (expenseEntries[i]['entryImageID'] && expenseEntries[i]['entryImageID'] != ""){
+                    if (expenseEntries[i]['entryImageID'] && expenseEntries[i]['entryImageID'] != "") {
                         expenseEntries[i]['receiptImage'] = {
                             href: rootUrl + '/expense/v4/approvers/receiptImage/' + expenseEntries[i]['entryImageID'],
                             rel: "Receipt Image",
@@ -114,12 +114,12 @@ module.exports = function(context, app, router) {
                     }
 
                     let itemizations = expenseEntries[i]['itemizationsList'];
-                    for (let j = 0; j < itemizations.length; j++){
+                    for (let j = 0; j < itemizations.length; j++) {
                         stripOutBlankOrgUnits(itemizations[j], 6);
                         stripOutBlankCustomFields(itemizations[j], 40);
 
                         let allocations = itemizations[j]['allocationsList'];
-                        for (let k = 0; k < allocations.length; k++){
+                        for (let k = 0; k < allocations.length; k++) {
                             stripOutBlankOrgUnits(allocations[k], 6);
                             stripOutBlankCustomFields(allocations[k], 40);
                         }
@@ -171,8 +171,7 @@ module.exports = function(context, app, router) {
                     approvalURL = reportJson.WorkflowActionURL;
                     logger.debug("approvalURL: " + approvalURL);
                 }
-                else
-                {
+                else {
                     logger.debug("Could not retrieve report");
                     res.json(502, {error: "bad_gateway", reason: 'Read report error'});
                     return;
@@ -217,7 +216,7 @@ module.exports = function(context, app, router) {
                 logger.debug("report.UserLoginID: " + report.UserLoginID);
                 logger.debug("report.ReportName: " + report.ReportName);
                 logger.debug("report.SubmitDate: " + report.SubmitDate);
-                
+
                 let queueMessage = {
                     type: 'Report',
                     userLoginID: reportJson.UserLoginID,
@@ -225,18 +224,13 @@ module.exports = function(context, app, router) {
                     submitDate: reportJson.SubmitDate,
                     options: options1
                 };
-//                queueMessage.type = "Report";
-//                queueMessage.UserLoginID = report.UserLoginID;
-//                queueMessage.name = report.ReportName;
-//                queueMessage.SubmitDate = report.SubmitDate;
-//                queueMessage.options = options1;
-                if (context.config.use_pubsub == 'true'){
+                if (context.config.use_pubsub == 'true') {
                     logger.debug("queueMessage: " + JSON.stringify(queueMessage));
-                    util.publish("Approvals", JSON.stringify(queueMessage), context, function(pubErr){
-                        if (pubErr){
+                    util.publish("Approvals", JSON.stringify(queueMessage), context, function (pubErr) {
+                        if (pubErr) {
                             res.json(502, {error: "bad_gateway", reason: pubErr.code});
                         }
-                        else{
+                        else {
                             res.status(200).json({"STATUS": "QUEUED FOR APPROVAL"});
                             return;
                         }
@@ -245,21 +239,21 @@ module.exports = function(context, app, router) {
                 else if (context.config.use_sqs == 'true') {
                     logger.debug("queueMessage: " + JSON.stringify(queueMessage));
                     cache.clearCache("home", access_token, context);
-                    util.sendApprovalSQSMessage(JSON.stringify(queueMessage), context, function(sendErr, data){
-                        if (sendErr){
+                    util.sendApprovalSQSMessage(JSON.stringify(queueMessage), context, function (sendErr, data) {
+                        if (sendErr) {
                             res.status(502).json({error: "bad_gateway", reason: sendErr.code});
                         }
-                        else{
+                        else {
                             res.status(202).json({"STATUS": "QUEUED FOR APPROVAL"});
                             return;
                         }
                     });
 
                 }
-                else{
+                else {
                     request(options1, function (postErr, postResp, approvalResponse) {
                         logger.debug("options1:" + options1.toString());
-                        if(postResp){
+                        if (postResp) {
                             logger.debug("postResp:" + postResp.toString());
                         }
 
@@ -270,48 +264,30 @@ module.exports = function(context, app, router) {
                         if (approvalResponse) {
                             let approvalRespString = approvalResponse.toString();
                             logger.debug("request body: " + approvalRespString);
-                            if (approvalRespString.indexOf("Error") > 0){
+                            if (approvalRespString.indexOf("Error") > 0) {
                                 res.status(502).json({error: "bad_gateway", reason: "Malformed request"});
                                 return;
                             }
-                            else{
-                                let jsonBody = xml2json.toJson(approvalResponse);
-                                cache.clearCache("home", access_token, context);
-                                logger.debug("response json body " + jsonBody);
-                                res.status(200).json({"STATUS": "SUCCESS"});
-                                return;
+                            else {
+                                let parseString = xml2js.parseString;
+                                parseString(approvalResponse, function (parseErr, jsonBody) {
+                                    if (paseErr) {
+                                        res.status(502).json({error: "bad_gateway", reason: parseErr.code});
+                                        return;
+                                    }
+                                    else {
+                                        cache.clearCache("home", access_token, context);
+                                        logger.debug("response json body " + jsonBody);
+                                        res.status(200).json({"STATUS": "SUCCESS"});
+                                        return;
+                                    }
+                                });
                             }
                         }
 
                     });
 
                 }
-           });
+            });
         });
-
-    router.route('/expense/v4/approvers/receiptImage/:imageId')
-        .get(function (req, res) {
-            let access_token = util.extractToken(req, res);
-            let imageId = req.params.imageId;
-
-            var options = {
-                oauthToken:access_token,
-                id:imageId
-            }
-
-            concur.receipt.get(options)
-                .then(function(data) {
-                    //data will contain the receipt image url
-                    logger.debug("Receipt data:" + data.Items.length);
-                })
-                .fail(function(error) {
-                    // error will contain the error message returned
-                    logger.debug("Receipt error:" + error);
-                    return;
-                });
-
-            res.status(200).json({"Status":"SUCCESS"});
-            return;
-
-        })
 }
