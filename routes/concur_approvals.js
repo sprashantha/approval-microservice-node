@@ -9,6 +9,7 @@ const
     logger = require('../lib/logger.js'),
     util = require('../lib/util.js'),
     cache = require('../lib//models/cache.js'),
+    handler = require('../handlers/approvalHandler.js'),
     concur = require('concur-platform');
 
 
@@ -38,33 +39,49 @@ module.exports = function(context, app, router) {
         logger.debug("concur url" + context.config.concur_api_url + context.config.concur_approvals_url);
         var access_token = util.extractToken(req, res);
         let rootUrl = util.getRootUrl(req, context);
-        let options = {
-            method: 'GET',
-            url: context.config.concur_api_url + context.config.concur_approvals_url,
-            headers: {
-                "Authorization": "OAuth " + access_token,
-                "Accept": "application/json"
-            }
-        }
-        request(options, function (err, couchRes, body) {
-            if (err) {
-                res.json(502, {error: "bad_gateway", reason: err.code});
+
+        let event = {};
+        event.access_token = access_token;
+        event.rootUrl = rootUrl;
+
+        //let options = {
+        //    method: 'GET',
+        //    url: context.config.concur_api_url + context.config.concur_approvals_url,
+        //    headers: {
+        //        "Authorization": "OAuth " + access_token,
+        //        "Accept": "application/json"
+        //    }
+        //}
+        //request(options, function (err, remoteRes, body) {
+        //    if (err) {
+        //        res.json(502, {error: "bad_gateway", reason: err.code});
+        //        return;
+        //    }
+        //
+        //    let reports = JSON.parse(body, util.reviver);
+        //    logger.debug("typeof reports: " + typeof reports);
+        //    logger.debug("reports.items.length: " + reports.items.length);
+        //    for (let i = 0; i < reports.items.length; i++) {
+        //        reports.items[i]['reportID'] = reports.items[i]['iD'];
+        //        reports.items[i]['href'] = rootUrl + "/expense/v4/approvers/reports/" + reports.items[i]['reportID'];
+        //
+        //        delete reports.items[i]['iD'];
+        //        delete reports.items[i]['uRI'];
+        //    }
+        //
+        //    res.json(reports);
+        //    return;
+        //});
+
+        handler.getReportsToApprove(event, context, function(err, data){
+            if (err){
+                res.status(502).json({error: "bad_gateway", reason: err.code});
                 return;
             }
-
-            let reports = JSON.parse(body, util.reviver);
-            logger.debug("typeof reports: " + typeof reports);
-            logger.debug("reports.items.length: " + reports.items.length);
-            for (let i = 0; i < reports.items.length; i++) {
-                reports.items[i]['reportID'] = reports.items[i]['iD'];
-                reports.items[i]['href'] = rootUrl + "/expense/v4/approvers/reports/" + reports.items[i]['reportID'];
-
-                delete reports.items[i]['iD'];
-                delete reports.items[i]['uRI'];
+            else{
+                res.status(200).json(data);
             }
 
-            res.json(reports);
-            return;
         });
     });
 
@@ -86,7 +103,7 @@ module.exports = function(context, app, router) {
                 }
             }
             logger.debug("options.url: " + options.url);
-            request(options, function (err, couchRes, body) {
+            request(options, function (err, remoteRes, body) {
                 if (err) {
                     res.status(502).json({error: "bad_gateway", reason: err.code});
                     return;
@@ -97,7 +114,6 @@ module.exports = function(context, app, router) {
                     // Note the reviver will change the fields from pascal case to camel case.
                     let jsonBody = JSON.parse(body, util.reviver);
 
-                    // console.log("Report body=" + body);
                     if (!jsonBody || jsonBody == '' || jsonBody.error) {
                         logger.debug("body: " + body);
                         if (jsonBody && jsonBody.error & jsonBody.error.message == 'Invalid report') {
@@ -160,6 +176,8 @@ module.exports = function(context, app, router) {
                             }
                         }
                     }
+
+                   // logger.debug("jsonBody: " + JSON.stringify(jsonBody));
 
                     res.json(jsonBody);
                     return;

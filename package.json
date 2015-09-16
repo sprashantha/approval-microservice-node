@@ -4,7 +4,7 @@
   "description": "Approvals API",
   "scripts": {
     "start": "node --harmony ./main.js",
-    "test": "mocha test"
+    "test": "mocha --harmony test"
   },
   "author": "Prashanth",
   "license": "ISC",
