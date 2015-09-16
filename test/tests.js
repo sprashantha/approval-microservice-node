@@ -4,6 +4,8 @@ let should = require('chai').should(),
     expect = require('chai').expect,
     logger = require('../lib/logger.js'),
     configSetup = require('../lib/config.js'),
+    db = require('../lib/models/dbwrapper.js'),
+    cache = require('../lib/models/cache.js'),
     handler = require('../handlers/approvalHandler.js');
 
 let host = 'http://localhost:3000';
@@ -21,7 +23,13 @@ describe('Get Approvals', function() {
 
         // Change the logging level so that we don't see too many debug logs.
         logger.transports.console.level = 'error';
+
+        // Setup redis
+        db.setupRedisConnection(context, function(err){
+            return;
+        })
     })
+
 
     it('returns the list of reports to approve', function (done) {
 
@@ -71,30 +79,27 @@ describe('Get Approvals', function() {
         });
     });
 
-    //it('returns a 404 error if report is not found', function (done) {
-    //    api.get('/expense/v4/approvers/reports/1234')
-    //        .set('Authorization', access_token)
-    //        .expect(404, done);
-    //
-    //});
-    //
-    //
-    //it('returns the details of a report to approve', function (done) {
-    //    // api.get('/expense/v4/approvers/reports/FD9F6475924A4339A31D')
-    //    api.get(reportUrl)
-    //        .set('Authorization', access_token)
-    //        .set('Accept', 'application/json')
-    //        .expect(200)
-    //        .end(function (err, res) {
-    //            res.body.should.exist;
-    //            res.body.should.have.property('reportID');
-    //            res.body.should.have.property('reportName');
-    //            res.body.should.have.property('reportTotal');
-    //            res.body.should.have.property('totalClaimedAmount');
-    //        })
-    //    done();
-    //
-    //});
+    it('tests the report cache', function (done) {
+
+        let event = {};
+        event.access_token = access_token;
+        event.rootUrl = host;
+        event.reportID = reportID;
+        logger.info("reportID: " + reportID);
+
+        handler.getReportDetails(event, context, function(err, body){
+            body.should.exist;
+            let jsonString = JSON.stringify(body);
+            cache.setCache('Approvals', access_token, jsonString, context);
+            cache.getCache('Approvals', access_token, context, function(cacheErr, cacheData){
+                cacheData.should.equal.jsonString;
+                return;
+            })
+            done();
+
+        });
+
+    });
 
 });
 
