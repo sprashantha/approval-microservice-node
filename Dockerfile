@@ -16,7 +16,8 @@ WORKDIR /src
 COPY . /src
 
 # Install app dependencies
-RUN cd /src; npm install
+# RUN cd /src; npm install
+RUN cd /src
 
 # Expose port
 EXPOSE  3000

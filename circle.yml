@@ -1,0 +1,20 @@
+machine:
+  services:
+    - docker
+
+dependencies:
+  override:
+    - docker info
+    - docker build -t sprashantha/approval-service-node .
+
+test:
+  override:
+    - docker run -p 49160:3000 -d sprashantha/approver-service-node; sleep 10
+    - npm test
+
+deployment:
+  hub:
+    branch: master
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push sprashantha/approval-service-node
